@@ -1,0 +1,417 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Areyyyyy Bhai — BongoLang Playground</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    --bg: #0f1724;
+    --muted: #9aa7bd;
+    --accent: #6dc4ff;
+    --accent-2: #7ee787;
+    --glass: rgba(255,255,255,0.03);
+    --radius: 12px;
+    --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, monospace;
+    --ui: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  }
+  html,body{height:100%; margin:0; background: linear-gradient(180deg,#071021 0%, #0f1724 60%); color:#dbeafe; font-family:var(--ui); -webkit-font-smoothing:antialiased;}
+  .container{max-width:1200px;margin:28px auto;padding:22px; display:grid; grid-template-columns: 1fr 420px; gap:22px; align-items:start;}
+  header{grid-column: 1 / -1; display:flex; align-items:center; gap:14px;}
+  .logo{width:60px;height:60px;border-radius:12px;background:linear-gradient(135deg,var(--accent),#4ba3ff);display:flex;align-items:center;justify-content:center;font-weight:800;font-family:var(--mono);color:#021028;font-size:18px;}
+  h1{margin:0;font-size:20px;font-weight:700;}
+  .subtitle{color:var(--muted); font-size:13px;margin-top:6px;}
+  .editor-card{background: linear-gradient(180deg,rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:var(--radius); padding:14px; box-shadow: 0 8px 30px rgba(2,6,23,0.45); border:1px solid rgba(255,255,255,0.03); display:flex; flex-direction:column; min-height:560px;}
+  .toolbar{display:flex;gap:10px; align-items:center; margin-bottom:10px;}
+  .btn{background:linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); border:1px solid rgba(255,255,255,0.04); color:var(--accent); padding:8px 12px; border-radius:10px; cursor:pointer; font-weight:700;}
+  .btn.primary{ background: linear-gradient(90deg,var(--accent),#4ba3ff); color:#021028; box-shadow: 0 6px 18px rgba(109,196,255,0.14); }
+  .btn.ghost{ background:transparent; color:var(--muted); border:1px dashed rgba(255,255,255,0.03); }
+  .editor{flex:1; border-radius:10px; overflow:hidden; display:flex; flex-direction:column; border:1px solid rgba(255,255,255,0.03);}
+  textarea#code{resize:none; border:0; outline:0; padding:18px; font-family:var(--mono); font-size:13px; color:#e6f3ff; background:linear-gradient(180deg, rgba(2,6,23,0.55), rgba(2,6,23,0.6)); min-height:380px; line-height:1.5; caret-color:var(--accent);}
+  .side{display:flex; flex-direction:column; gap:12px;}
+  .panel{background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01)); border-radius:12px; padding:14px; border:1px solid rgba(255,255,255,0.03); box-shadow: 0 8px 24px rgba(2,6,23,0.45);}
+  .panel h3{margin:0 0 8px 0; font-size:14px;}
+  #out{ font-family:var(--mono); font-size:13px; background:linear-gradient(90deg, rgba(1,7,18,0.6), rgba(4,10,18,0.75)); padding:12px; border-radius:8px; min-height:220px; color:#cfe8ff; overflow:auto; border:1px solid rgba(255,255,255,0.03);}
+  .meta{display:flex;gap:8px;align-items:center; color:var(--muted); font-size:13px;}
+  .chip{background:rgba(255,255,255,0.02); padding:6px 8px; border-radius:8px; color:var(--muted); border:1px solid rgba(255,255,255,0.02);}
+  footer{grid-column: 1 / -1; margin-top:18px; color:var(--muted); font-size:13px; display:flex; justify-content:space-between; align-items:center;}
+  .row{display:flex; gap:8px; align-items:center;}
+  .grow{flex:1;}
+  .kbd{background:rgba(255,255,255,0.04); padding:6px 8px; border-radius:8px; color:var(--muted); font-size:12px;}
+  .status{color:var(--muted); font-size:13px; margin-left:6px;}
+  .running { box-shadow: 0 0 32px rgba(109,196,255,0.08) inset; border:1px solid rgba(109,196,255,0.06); animation: pulse 1.6s infinite; }
+  @keyframes pulse { 0%{filter:brightness(1);}50%{filter:brightness(1.03);}100%{filter:brightness(1);} }
+  @media (max-width:980px){ .container{grid-template-columns: 1fr; padding:18px;} .editor-card{min-height:420px;} }
+  /* terminal boot credit styles (integrated) */
+  #boot-credit { width: fit-content; padding: 10px 14px; border-radius: 8px; background: rgba(0,0,0,0.55); color: #cfe8ff; font-family: "JetBrains Mono", monospace; font-size:13px; line-height:1.35; border:1px solid rgba(255,255,255,0.04); box-shadow: 0 8px 30px rgba(2,6,23,0.5); user-select: none; cursor: pointer; margin-top:8px; }
+  #boot-credit .line { white-space: pre; opacity: 0.95; }
+  #boot-credit .cursor { display:inline-block; width:10px; height:1.1em; background: linear-gradient(90deg,#00eaff,#6cffdb); margin-left:4px; vertical-align:bottom; animation: blink 1s steps(2, start) infinite; border-radius:2px; }
+  #boot-credit .credit { margin-top:6px; padding:8px 12px; border-radius:8px; display:inline-block; color:#00f6ff; background: rgba(0,246,255,0.03); border: 1px solid rgba(0,246,255,0.09); text-shadow: 0 0 6px rgba(0,246,255,0.5), 0 0 12px rgba(0,246,255,0.25); box-shadow: 0 6px 22px rgba(0,246,255,0.04), inset 0 -4px 12px rgba(0,246,255,0.02); font-weight:700; font-size:14px; }
+  #boot-credit .hint { color: rgba(207,232,255,0.55); font-size:12px; margin-top:6px; display:block }
+  @keyframes blink { 0% { opacity:1 } 50% { opacity:0 } 100% { opacity:1 } }
+</style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="logo">JB</div>
+      <div>
+        <h1>Areyyyyy Bhai — BongoLang Playground</h1>
+        <div class="subtitle">Soothing playground — input() is disabled. Ctrl/Cmd+Enter to run. Enjoy the calm.</div>
+        <!-- Terminal boot credit (auto-starts, click to replay) -->
+        <div id="boot-credit" aria-live="polite" title="Click to replay the boot animation"></div>
+      </div>
+      <div class="grow"></div>
+      <div class="meta">
+        <div class="chip">Interpreter: Areyyyyy_Bhai.py</div>
+        <div class="chip">Pyodide client-side</div>
+      </div>
+    </header>
+
+    <section class="editor-card">
+      <div class="toolbar">
+        <button class="btn primary" id="run">▶ Run (Ctrl+Enter)</button>
+        <button class="btn" id="save">💾 Save</button>
+        <button class="btn ghost" id="download">⬇ Download</button>
+        <button class="btn ghost" id="format">✨ Beautify</button>
+        <div style="flex:1"></div>
+        <div class="kbd">Ctrl / Cmd + Enter</div>
+      </div>
+
+      <div class="editor" id="editorWrap">
+        <textarea id="code" spellcheck="false">// Welcome to Areyyyyy Bhai — BongoLang
+cholo fact(n) {
+  jodi (n == 0) {
+    phero 1;
+  }
+  phero n * fact(n - 1);
+}
+
+bolo fact(6);
+</textarea>
+      </div>
+
+      <div style="display:flex; gap:10px; margin-top:10px; align-items:center;">
+        <div class="status" id="status">Loading interpreter...</div>
+        <div style="flex:1"></div>
+        <a id="clear" class="btn ghost">Clear Output</a>
+      </div>
+    </section>
+
+    <aside class="side">
+      <div class="panel">
+        <h3>Output</h3>
+        <div id="out">(interpreter not loaded yet)</div>
+        <div style="display:flex; gap:8px; margin-top:10px; align-items:center;">
+          <button class="btn" id="copyOut">📋 Copy Output</button>
+          <button class="btn" id="runAndShare">🔗 Share (local)</button>
+          <div style="flex:1"></div>
+          <label style="color:var(--muted); font-size:13px;">
+            <input type="checkbox" id="showTrace" checked> Show traceback
+          </label>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Examples</h3>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn ghost" id="ex1">Hello + Math</button>
+          <button class="btn ghost" id="ex2">Factorial</button>
+          <button class="btn ghost" id="ex3">Loop demo</button>
+          <button class="btn ghost" id="ex4">Error demo</button>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3>Tips</h3>
+        <div style="color:var(--muted); font-size:13px; line-height:1.5;">
+          • Use <span class="kbd">accha</span> to declare variables.<br>
+          • <span class="kbd">phero</span> returns from functions.<br>
+          • Input is disabled — calling <span class="kbd">input()</span> raises a friendly error.<br>
+          • Save code to localStorage or download a .bongo file.
+        </div>
+      </div>
+    </aside>
+
+    <footer>
+      <div>Made with ❤️ by <strong>Jishnu Da</strong></div>
+      <div class="small">Areyyyyy Bhai interpreter • client-side demo</div>
+    </footer>
+  </div>
+
+<script type="module">
+// ---------- CONFIG ----------
+const PYODIDE_CDN = "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/pyodide.js";
+const INTERPRETER_PATH = "Areyyyyy_Bhai.py"; // must be next to this HTML
+
+// ---------- UI ----------
+const runBtn = document.getElementById('run');
+const saveBtn = document.getElementById('save');
+const downloadBtn = document.getElementById('download');
+const formatBtn = document.getElementById('format');
+const codeArea = document.getElementById('code');
+const statusEl = document.getElementById('status');
+const outEl = document.getElementById('out');
+const copyOutBtn = document.getElementById('copyOut');
+const runAndShareBtn = document.getElementById('runAndShare');
+const showTraceCheckbox = document.getElementById('showTrace');
+const clearOutputEl = document.getElementById('clear');
+const ex1 = document.getElementById('ex1');
+const ex2 = document.getElementById('ex2');
+const ex3 = document.getElementById('ex3');
+const ex4 = document.getElementById('ex4');
+const bootCreditEl = document.getElementById('boot-credit');
+
+let pyodide = null;
+let ready = false;
+
+// small utilities
+function setStatus(s){ statusEl.textContent = s; }
+function animateRun(on){ const editorWrap = document.getElementById('editorWrap'); if(on) editorWrap.classList.add('running'); else editorWrap.classList.remove('running'); }
+
+// localStorage persistence
+const STORAGE_KEY = "bongo:areyyyyy_code";
+function saveToLocal(){ localStorage.setItem(STORAGE_KEY, codeArea.value); setStatus("Saved locally"); setTimeout(()=> setStatus("Ready"), 900); }
+function loadFromLocal(){ const v = localStorage.getItem(STORAGE_KEY); if(v) codeArea.value = v; }
+loadFromLocal();
+
+// download
+downloadBtn.onclick = () => {
+  const blob = new Blob([codeArea.value], {type:'text/plain;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href = url; a.download = 'script.bongo'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+};
+
+// copy output
+copyOutBtn.onclick = async () => {
+  try { await navigator.clipboard.writeText(outEl.textContent); setStatus("Output copied"); } catch(e){ setStatus("Copy failed"); }
+  setTimeout(()=> setStatus("Ready"), 900);
+};
+
+// share (local)
+runAndShareBtn.onclick = () => {
+  const id = "share-" + Date.now();
+  localStorage.setItem(id, codeArea.value);
+  const url = window.location.href.split('#')[0] + "#" + id;
+  navigator.clipboard.writeText(url).then(()=> setStatus("Share link copied"), ()=> setStatus("Share failed"));
+  setTimeout(()=> setStatus("Ready"), 900);
+};
+
+// examples
+ex1.onclick = () => {
+  codeArea.value = `accha a = 5;
+accha b = 7;
+bolo "sum =", a + b;`;
+};
+ex2.onclick = () => {
+  codeArea.value = `cholo fact(n) {
+  jodi (n == 0) {
+    phero 1;
+  }
+  phero n * fact(n - 1);
+}
+bolo fact(6);`;
+};
+ex3.onclick = () => {
+  codeArea.value = `accha i = 0;
+jotokhon_porjonto (i < 5) {
+  bolo "i =", i;
+  i = i + 1;
+}`;
+};
+ex4.onclick = () => {
+  codeArea.value = `// Error demo: using variable without accha
+x = 3;
+bolo x;`;
+};
+
+// beautify (simple)
+formatBtn.onclick = () => {
+  const src = codeArea.value;
+  const pretty = src.replace(/\s*{\s*/g, " {\n  ").replace(/\s*}\s*/g, "\n}\n").replace(/;\s*/g,";\n");
+  codeArea.value = pretty;
+  setStatus("Formatted (simple)");
+  setTimeout(()=> setStatus("Ready"), 900);
+};
+
+// clear output
+clearOutputEl.onclick = () => { outEl.textContent = ""; };
+
+// Save
+saveBtn.onclick = saveToLocal;
+
+// keyboard shortcuts
+window.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); runClicked(); }
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveToLocal(); }
+});
+
+// load shared snippet via hash
+(function loadShared(){
+  const h = window.location.hash.slice(1);
+  if (h && h.startsWith("share-")) {
+    const v = localStorage.getItem(h);
+    if (v) codeArea.value = v;
+  }
+})();
+
+// ---------- Terminal boot credit animation ----------
+const BOOT_LINES = [
+  "POST: Checking BongoLang hardware... OK",
+  "Loading Areyyyyy_Bhai interpreter... done",
+  "Initializing playful keywords... ✓",
+  "Securing coffee supply... acquired",
+  "",
+  "Authored by Jishnu Da  ⚡"
+];
+const CHAR_DELAY = 18;
+const LINE_PAUSE = 380;
+const LONG_PAUSE = 900;
+
+(function setupBootCredit(){
+  const container = bootCreditEl;
+  if (!container) return;
+  container.title = "Click to replay boot sequence";
+  container.addEventListener('click', ()=> startBoot(container));
+  startBoot(container);
+})();
+
+async function startBoot(container) {
+  container.innerHTML = '';
+  container.classList.remove('finished');
+  const lines = [];
+  for (let i=0;i<BOOT_LINES.length;i++){
+    const l = document.createElement('div'); l.className = 'line'; container.appendChild(l); lines.push(l);
+  }
+  for (let i=0;i<BOOT_LINES.length;i++){
+    const txt = BOOT_LINES[i];
+    if (i === BOOT_LINES.length - 1) {
+      await typeText(lines[i], txt, CHAR_DELAY * 1.2);
+      await pause(LONG_PAUSE);
+      showCredit(container, lines[i], txt);
+      break;
+    } else {
+      await typeText(lines[i], txt, CHAR_DELAY);
+      await pause(LINE_PAUSE);
+    }
+  }
+  const hint = document.createElement('div'); hint.className='hint'; hint.textContent = "Click this message to replay the boot animation"; container.appendChild(hint);
+}
+
+function typeText(el, text, charDelay) {
+  return new Promise((resolve) => {
+    el.textContent = '';
+    let idx = 0;
+    const cursor = document.createElement('span'); cursor.className = 'cursor'; el.appendChild(cursor);
+    function step() {
+      if (idx >= text.length) { cursor.remove(); resolve(); return; }
+      cursor.insertAdjacentText('beforebegin', text[idx]); idx++; setTimeout(step, charDelay + jitter(6));
+    }
+    setTimeout(step, 80 + Math.random()*60);
+  });
+}
+function pause(ms){ return new Promise(r => setTimeout(r, ms)); }
+function jitter(n){ return Math.floor((Math.random()-0.5) * n); }
+function showCredit(container, el, text) {
+  container.innerHTML = '';
+  const credit = document.createElement('div'); credit.className = 'credit'; credit.textContent = text;
+  container.appendChild(credit);
+  credit.style.opacity = '0'; credit.style.transform = 'translateY(6px)';
+  requestAnimationFrame(()=>{ credit.style.transition = 'all 420ms cubic-bezier(.2,.9,.3,1)'; credit.style.opacity = '1'; credit.style.transform = 'translateY(0)'; });
+  container.classList.add('finished');
+}
+
+// ---------- Pyodide + interpreter loader ----------
+async function loadPyodideAndInterpreter(){
+  setStatus("Loading Pyodide (WASM)...");
+  await new Promise((resolve, reject) => { const s = document.createElement('script'); s.src = PYODIDE_CDN; s.onload = resolve; s.onerror = reject; document.head.appendChild(s); });
+
+  setStatus("Initializing runtime...");
+  pyodide = await loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.23.4/full/" });
+
+  setStatus("Fetching interpreter...");
+  const resp = await fetch(INTERPRETER_PATH);
+  if (!resp.ok){ outEl.textContent = "ERROR: Could not fetch Areyyyyy_Bhai.py. Put it next to index.html"; setStatus("Fetch failed"); throw new Error("fetch failed"); }
+  const interpreterCode = await resp.text();
+
+  setStatus("Installing harness (input() disabled)...");
+  const harness = `
+# harness for BongoLang — input() disabled, capture output
+import sys, io, traceback, builtins
+
+def _blocked_input(prompt=""):
+    raise RuntimeError("Areyyyyy Bhai! input() use kora jabena — ei website input support kore na!")
+
+builtins.input = _blocked_input
+
+def _capture_run(src, show_trace=True):
+    old_out = sys.stdout
+    buf = io.StringIO()
+    sys.stdout = buf
+    try:
+        try:
+            run_code(src)
+            out = buf.getvalue()
+            if out == '':
+                return '(no output)'
+            return out
+        except Exception as e:
+            short = f"Areyyyyy Bhai eikhane error ache re ({type(e).__name__}: {e})....thik kore ne tahole"
+            if show_trace:
+                tb = traceback.format_exc()
+                return short + "\\n\\n--- traceback (for debugging) ---\\n" + tb
+            else:
+                return short
+    finally:
+        sys.stdout = old_out
+`;
+
+  await pyodide.runPythonAsync(interpreterCode + "\n\n" + harness);
+
+  window.runBongo = async (code, options = {showTrace:true}) => {
+    const flag = options.showTrace ? "True" : "False";
+    return await pyodide.runPythonAsync(`_capture_run(${JSON.stringify(code)}, ${flag})`);
+  };
+
+  ready = true;
+  setStatus("Ready");
+  outEl.textContent = "(interpreter loaded — paste code and press Run)";
+}
+
+// run logic
+async function runClicked(){
+  if (!ready){ outEl.textContent = "Interpreter not ready"; return; }
+  animateRun(true);
+  runBtn.textContent = "Running…";
+  const code = codeArea.value;
+  outEl.textContent = "Running...";
+  try {
+    const res = await window.runBongo(code, {showTrace: showTraceCheckbox.checked});
+    outEl.textContent = res;
+    outEl.scrollTop = outEl.scrollHeight;
+  } catch (err){
+    outEl.textContent = "Areyyyyy Bhai! Page error: " + String(err);
+  } finally {
+    animateRun(false);
+    runBtn.textContent = "▶ Run (Ctrl+Enter)";
+    setTimeout(()=> setStatus("Ready"), 400);
+  }
+}
+
+runBtn.onclick = runClicked;
+
+// initialize
+(async () => {
+  try {
+    await loadPyodideAndInterpreter();
+  } catch (err) {
+    setStatus("Load failed");
+    outEl.textContent = "Failed to load interpreter: " + String(err);
+  }
+})();
+</script>
+</body>
+</html>

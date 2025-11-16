@@ -3,60 +3,61 @@ import sys
 import random
 
 # ---------- LEXER ----------
-# Order matters: multi-char tokens (==, !=, <=, >=) must appear before single-char '='
+# Order matters: comment rule must come BEFORE IDENT so `emni_bolchi:...` is recognized
 TOKEN_SPEC = [
     ('NUMBER',   r'\d+(\.\d+)?'),
     ('STRING',   r'"([^"\\]|\\.)*"'),
+
     ('EQ',       r'=='),
     ('NE',       r'!='),
     ('LE',       r'<='),
     ('GE',       r'>='),
     ('LT',       r'<'),
     ('GT',       r'>'),
+
     ('ASSIGN',   r'='),
     ('PLUS',     r'\+'),
     ('MINUS',    r'-'),
     ('MUL',      r'\*'),
     ('DIV',      r'/'),
+
     ('LPAREN',   r'\('),
     ('RPAREN',   r'\)'),
     ('LBRACE',   r'\{'),
     ('RBRACE',   r'\}'),
     ('COMMA',    r','),
     ('SEMI',     r';'),
+
+    # COMMENTS must come before IDENT:
+    # single-line comments start with emni_bolchi:
+    ('COMMENT',  r'emni_bolchi:.*'),
+
+    # Identifiers (ASCII + Bengali-range + '?')
     ('IDENT',    r'[A-Za-z_\u0980-\u09FF\?][A-Za-z0-9_\u0980-\u09FF\?]*'),
+
     ('SKIP',     r'[ \t]+'),
     ('NEWLINE',  r'\n'),
-    ('COMMENT',  r'//.*'),
     ('MISMATCH', r'.'),
 ]
 TOKEN_RE = re.compile('|'.join(f"(?P<{n}>{p})" for n, p in TOKEN_SPEC))
 
-# Keywords mapping (Bengali-sounding words in ASCII)
+
+# ---------- KEYWORDS ----------
 KEYWORDS = {
-    # print / control
     'bolo': 'SUN',
-    'chaap': 'SUN',          # alias for debug-print
+    'chaap': 'SUN',
     'jodi': 'AGAR',
     'nahole': 'WARNA',
     'jotokhon_porjonto': 'TABTAK',
-    'ghurbo': 'TABTAK',      # alias
-
-    # functions & return
+    'ghurbo': 'TABTAK',
     'cholo': 'CHAL',
     'cholo_na': 'CHAL',
     'phero': 'WAAPIS',
-
-    # booleans
     'thik': 'TRUE',
     'bhul': 'FALSE',
-
-    # variable initializer
     'accha': 'ACCHA',
-
-    # fun keywords
     'bujhli?': 'BUJHLIQ',
-    'hmm': 'HMM',
+    'hmm': 'HMM'
 }
 
 class Token:
@@ -82,7 +83,8 @@ def lex(code):
                 yield Token(KEYWORDS[val], val, pos)
             else:
                 yield Token('IDENT', val, pos)
-        elif kind in ('SKIP','NEWLINE','COMMENT'):
+        elif kind in ('SKIP', 'NEWLINE', 'COMMENT'):
+            # skip whitespace, newlines and comments (emni_bolchi: ... )
             pass
         elif kind == 'MISMATCH':
             raise SyntaxError(f'Unexpected char {val!r} at pos {pos}')
@@ -91,10 +93,9 @@ def lex(code):
         pos = mo.end()
     yield Token('EOF', '', pos)
 
-# ---------- PARSER (recursive descent) ----------
+# ---------- PARSER ----------
 class Parser:
     def __init__(self, tokens):
-        # tokens may be an iterator; convert to list for simplicity
         self.tokens = list(tokens)
         self.pos = 0
 
@@ -121,7 +122,7 @@ class Parser:
     def parse_statement(self):
         t = self.peek()
 
-        # print / bolo / chaap: allow multiple comma-separated expressions
+        # print / bolo or chaap: allow multiple comma-separated expressions
         if t.type == 'SUN':
             self.advance()
             exprs = [self.parse_expr()]
@@ -138,7 +139,7 @@ class Parser:
             self.expect('SEMI')
             return ('return', expr)
 
-        # variable declaration: accha x;  OR accha x = expr;
+        # variable declaration
         elif t.type == 'ACCHA':
             self.advance()
             name = self.expect('IDENT').val
@@ -239,13 +240,13 @@ class Parser:
         self.expect('RPAREN')
         self.expect('LBRACE')
         body = []
-        # now parse statements normally — 'WAAPIS' handled in parse_statement
+        # parse statements normally — 'WAAPIS' handled in parse_statement
         while self.peek().type != 'RBRACE':
             body.append(self.parse_statement())
         self.expect('RBRACE')
         return ('func', name, args, ('block', body))
 
-    # expressions with precedence
+    # Expressions with precedence
     def parse_expr(self):
         return self.parse_equality()
 
@@ -253,32 +254,28 @@ class Parser:
         node = self.parse_comparison()
         while self.peek().type in ('EQ','NE'):
             op = self.advance().type
-            right = self.parse_comparison()
-            node = (op, node, right)
+            node = (op, node, self.parse_comparison())
         return node
 
     def parse_comparison(self):
         node = self.parse_term()
         while self.peek().type in ('LT','GT','LE','GE'):
             op = self.advance().type
-            right = self.parse_term()
-            node = (op, node, right)
+            node = (op, node, self.parse_term())
         return node
 
     def parse_term(self):
         node = self.parse_factor()
         while self.peek().type in ('PLUS','MINUS'):
             op = self.advance().type
-            right = self.parse_factor()
-            node = (op, node, right)
+            node = (op, node, self.parse_factor())
         return node
 
     def parse_factor(self):
         node = self.parse_unary()
         while self.peek().type in ('MUL','DIV'):
             op = self.advance().type
-            right = self.parse_unary()
-            node = (op, node, right)
+            node = (op, node, self.parse_unary())
         return node
 
     def parse_unary(self):
@@ -347,11 +344,10 @@ class Interpreter:
         # multi-arg print
         if kind == 'print_multi':
             vals = [self.eval(e, env) for e in node[1]]
-            # simple join with spaces
             print(' '.join(str(v) for v in vals))
             return None
 
-        # bujhli? (print thik/bhul)
+        # bujhli? -> print thik/bhul
         if kind == 'bujhli':
             val = self.eval(node[1], env)
             print('thik' if val else 'bhul')
@@ -362,7 +358,7 @@ class Interpreter:
             print('hmm...')
             return None
 
-        # declare
+        # declaration
         if kind == 'declare':
             env[node[1]] = None
             return None
@@ -371,7 +367,7 @@ class Interpreter:
             env[node[1]] = self.eval(node[2], env)
             return None
 
-        # assign (must be declared)
+        # assignment (must be declared)
         if kind == 'assign':
             name = node[1]
             if name not in env:
@@ -394,7 +390,7 @@ class Interpreter:
                 self.eval(node[2], env)
             return None
 
-        # function definition
+        # function def
         if kind == 'func':
             name = node[1]; args = node[2]; body = node[3]
             self.functions[name] = (args, body)
@@ -424,7 +420,7 @@ class Interpreter:
             name = node[1]
             args = [self.eval(a, env) for a in node[2]]
 
-            # builtins:
+            # builtins
             if name == 'dher':
                 return len(args[0])
             if name == 'chaap':
@@ -464,7 +460,6 @@ class Interpreter:
                     raise TypeError('Argument count mismatch')
                 # create function-local environment inheriting caller env (lexical)
                 newenv = dict(env)   # inherit variables from caller
-                # parameters shadow any existing names
                 for k, v in zip(fargs, args):
                     newenv[k] = v
                 try:
@@ -524,7 +519,6 @@ def repl():
             break
         # accept multi-line input until semicolon or closing brace
         buf = line + "\n"
-        # if the line doesn't end a statement, read more
         while (';' not in line) and ('}' not in line):
             try:
                 line = input("... ")
